@@ -3,3 +3,4 @@
 #You know how these basic config files work by now.
 francinum
 kmc2000
+wyderar
