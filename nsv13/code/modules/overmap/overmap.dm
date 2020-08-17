@@ -67,7 +67,7 @@
 	var/landing_gear = FALSE //Allows you to move in atmos without scraping the hell outta your ship
 
 	var/bump_impulse = 0.6
-	var/bounce_factor = 0.2 // how much of our velocity to keep on collision
+	var/bounce_factor = 0.7 // how much of our velocity to keep on collision
 	var/lateral_bounce_factor = 0.95 // mostly there to slow you down when you drive (pilot?) down a 2x2 corridor
 
 	var/brakes = FALSE //Helps you stop the ship
@@ -207,12 +207,16 @@ Proc to spool up a new Z-level for a player ship and assign it a treadmill.
 
 /obj/structure/overmap/Initialize()
 	. = ..()
+	return INITIALIZE_HINT_LATELOAD
+
+/obj/structure/overmap/LateInitialize()
+	. = ..()
 	if(role > NORMAL_OVERMAP)
 		SSstar_system.add_ship(src)
 		reserved_z = src.z //Our "reserved" Z will always be kept for us, no matter what. If we, for example, visit a system that another player is on and then jump away, we are returned to our own Z.
 	current_tracers = list()
 	GLOB.overmap_objects += src
-	START_PROCESSING(SSovermap, src)
+	START_PROCESSING(SSphysics_processing, src)
 
 	vector_overlay = new()
 	vector_overlay.appearance_flags |= KEEP_APART
@@ -240,30 +244,40 @@ Proc to spool up a new Z-level for a player ship and assign it a treadmill.
 			backward_maxthrust = 3
 			side_maxthrust = 3
 			max_angular_acceleration = 110
+			bounce_factor = 0.65
+			lateral_bounce_factor = 0.95
 
 		if(MASS_MEDIUM)
 			forward_maxthrust = 2
 			backward_maxthrust = 2
 			side_maxthrust = 2
 			max_angular_acceleration = 15
+			bounce_factor = 0.5
+			lateral_bounce_factor = 0.8
 
 		if(MASS_MEDIUMLARGE)
 			forward_maxthrust = 1.85
 			backward_maxthrust = 1.85
 			side_maxthrust = 1.5
 			max_angular_acceleration = 10
+			bounce_factor = 0.45
+			lateral_bounce_factor = 0.8
 
 		if(MASS_LARGE)
 			forward_maxthrust = 0.5
 			backward_maxthrust = 0.5
 			side_maxthrust = 0.5
 			max_angular_acceleration = 2.5
+			bounce_factor = 0.35
+			lateral_bounce_factor = 0.6
 
 		if(MASS_TITAN)
-			forward_maxthrust = 0.25
-			backward_maxthrust = 0.25
-			side_maxthrust = 0.25
-			max_angular_acceleration = 1
+			forward_maxthrust = 0.4
+			backward_maxthrust = 0.4
+			side_maxthrust = 0.4
+			max_angular_acceleration = 1.5
+			bounce_factor = 0.20
+			lateral_bounce_factor = 0.3
 
 	if(role == MAIN_OVERMAP)
 		name = "[station_name()]"
@@ -277,11 +291,12 @@ Proc to spool up a new Z-level for a player ship and assign it a treadmill.
 /obj/structure/overmap/proc/apply_weapons()
 	weapon_types[FIRE_MODE_PDC] = (mass > MASS_TINY) ? new/datum/ship_weapon/pdc_mount(src) : new /datum/ship_weapon/light_cannon(src)
 	weapon_types[FIRE_MODE_TORPEDO] = new/datum/ship_weapon/torpedo_launcher(src)
-	weapon_types[FIRE_MODE_RAILGUN] = new/datum/ship_weapon/railgun(src)
-	weapon_types[FIRE_MODE_MAC] = new /datum/ship_weapon/mac(src)
-	if(mass > MASS_TINY)
+	if(mass > MASS_TINY || occupying_levels.len)
 		weapon_types[FIRE_MODE_FLAK] = new/datum/ship_weapon/flak(src)
-	weapon_types[FIRE_MODE_GAUSS] = new /datum/ship_weapon/gauss(src) //AI ships want to be able to use gauss too. I say let them...
+		weapon_types[FIRE_MODE_RAILGUN] = new/datum/ship_weapon/railgun(src)
+	if(mass > MASS_MEDIUM || occupying_levels.len)
+		weapon_types[FIRE_MODE_GAUSS] = new /datum/ship_weapon/gauss(src) //AI ships want to be able to use gauss too. I say let them...
+		weapon_types[FIRE_MODE_MAC] = new /datum/ship_weapon/mac(src)
 	if(ai_controlled)
 		weapon_types[FIRE_MODE_MISSILE] = new/datum/ship_weapon/missile_launcher(src)
 
@@ -317,7 +332,14 @@ Proc to spool up a new Z-level for a player ship and assign it a treadmill.
 		return TRUE
 	if(user != gunner)
 		if(user == pilot)
-			fire_weapon(target, FIRE_MODE_RAILGUN)
+			var/datum/ship_weapon/SW = weapon_types[FIRE_MODE_RAILGUN] //For annoying ships like whisp
+			var/list/loaded = SW.weapons["loaded"]
+			if(SW && loaded?.len)
+				fire_weapon(target, FIRE_MODE_RAILGUN)
+			else
+				SW = weapon_types[FIRE_MODE_RED_LASER]
+				if(SW)
+					fire_weapon(target, FIRE_MODE_RED_LASER)
 		return FALSE
 	if(tactical && prob(80))
 		var/sound = pick(GLOB.computer_beeps)
@@ -523,8 +545,6 @@ Proc to spool up a new Z-level for a player ship and assign it a treadmill.
 				if(tactical && prob(80))
 					var/sound = pick(GLOB.computer_beeps)
 					playsound(tactical, sound, 100, 1)
-			if(themob == pilot)
-				boost(NORTH)
 			return TRUE
 		if("Q" || "q")
 			if(!move_by_mouse)

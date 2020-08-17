@@ -51,7 +51,10 @@
 		var/list/info = contents_positions[ship]
 		ship.forceMove(get_turf(locate(info["x"], info["y"], occupying_z))) //Let's unbox that ship. Nice.
 		if(istype(ship, /obj/structure/overmap))
-			START_PROCESSING(SSovermap, ship) //And let's stop it from processing too.
+			START_PROCESSING(SSphysics_processing, ship) //And let's stop it from processing too.
+			var/obj/structure/overmap/OM = ship
+			if(OM.physics2d)
+				START_PROCESSING(SSphysics_processing, OM.physics2d) //Respawn this ship's collider so it can start colliding once more
 	}
 	contents_positions = null
 	contents_positions = list()
@@ -61,7 +64,7 @@
 	for(var/atom/X in system_contents)
 		if(istype(X, /obj/structure/overmap))
 			var/obj/structure/overmap/ship = X
-			if(ship.role > NORMAL_OVERMAP && ship != OM)
+			if(ship.occupying_levels.len && ship != OM)
 				other_player_ships += ship
 	if(OM.reserved_z == occupying_z && other_player_ships.len) //Alright, this is our Z-level but we're jumping out of it and there are still people here.
 		var/obj/structure/overmap/ship = pick(other_player_ships)
@@ -79,7 +82,7 @@
 	for(var/atom/movable/X in system_contents)
 		if(istype(X, /obj/structure/overmap))
 			var/obj/structure/overmap/ship = X
-			if(ship != OM && ship.role > NORMAL_OVERMAP) //If there's a player ship left to hold the system, early return and keep this Z loaded.
+			if(ship != OM && ship.occupying_levels.len) //If there's a player ship left to hold the system, early return and keep this Z loaded.
 				return
 			if(ship.operators.len && !ship.ai_controlled) //Alright, now we handle the small ships. If there is no longer a large ship to hold the system, we just get caught up its wake and travel along with it.
 				ship.relay("<span class='warning'>You're caught in [OM]'s bluespace wake!</span>")
@@ -90,7 +93,10 @@
 		contents_positions[X] = list("x" = X.x, "y" = X.y) //Cache the ship's position so we can regenerate it later.
 		X.moveToNullspace() //Anything that's an NPC should be stored safely in nullspace until we return.
 		if(istype(X, /obj/structure/overmap))
-			STOP_PROCESSING(SSovermap, X) //And let's stop it from processing too.
+			var/obj/structure/overmap/foo = X
+			STOP_PROCESSING(SSphysics_processing, X) //And let's stop it from processing too.
+			if(foo.physics2d)
+				STOP_PROCESSING(SSphysics_processing, foo.physics2d) //Despawn this ship's collider, to avoid wasting time figuring out if it's colliding with things or not.
 	occupying_z = 0 //Alright, no ships are holding it anymore. Stop holding the Z-level
 
 /obj/structure/overmap/proc/begin_jump(datum/star_system/target_system)
@@ -134,12 +140,12 @@
 	if(ftl_start)
 		relay(ftl_drive.ftl_loop, "<span class='warning'>You feel the ship lurch forward</span>", loop=TRUE, channel = CHANNEL_SHIP_ALERT)
 		var/datum/star_system/curr = SSstar_system.ships[src]["current_system"]
+		curr.remove_ship(src)
 		var/speed = (curr.dist(target_system) / (ftl_drive.jump_speed_factor*10)) //TODO: FTL drive speed upgrades.
 		SSstar_system.ships[src]["to_time"] = world.time + speed MINUTES
 		SEND_SIGNAL(src, COMSIG_FTL_STATE_CHANGE)
 		if(role == MAIN_OVERMAP) //Scuffed please fix
 			priority_announce("Attention: All hands brace for FTL translation. Destination: [target_system]. Projected arrival time: [station_time_timestamp("hh:mm", world.time + speed MINUTES)] (Local time)","Automated announcement") //TEMP! Remove this shit when we move ruin spawns off-z
-		curr.remove_ship(src)
 		SSstar_system.ships[src]["target_system"] = target_system
 		SSstar_system.ships[src]["from_time"] = world.time
 		SSstar_system.ships[src]["current_system"] = null
@@ -321,7 +327,6 @@ A way for syndies to track where the player ship is going in advance, so they ca
 	radio.talk_into(src, "TRACKING: FTL signature detected. Tracking information updated.",engineering_channel)
 	for(var/list/L in tracking)
 		var/obj/structure/overmap/target = L["ship"]
-		to_chat(world, target)
 		var/datum/star_system/target_system = SSstar_system.ships[target]["target_system"]
 		var/datum/star_system/current_system = SSstar_system.ships[target]["current_system"]
 		tracking[target] = list("name" = target.name, "current_system" = current_system.name, "target_system" = target_system.name)
