@@ -8,6 +8,7 @@
 	name = "quick_equip"
 	full_name = "Quick equip"
 	description = ""
+	keybind_signal = COMSIG_KB_HUMAN_QUICKEQUIP_DOWN
 
 /datum/keybinding/human/quick_equip/down(client/user)
 	if (!ishuman(user.mob)) return
@@ -21,6 +22,7 @@
 	name = "quick_equip_belt"
 	full_name = "Put Item In Belt"
 	description = ""
+	keybind_signal = COMSIG_KB_HUMAN_QUICKEQUIPBELT_DOWN
 
 /datum/keybinding/human/quick_equip_belt/down(client/user)
 	if (!ishuman(user.mob)) return

@@ -48,6 +48,10 @@ GLOBAL_VAR(test_log)
 
 	LAZYADD(fail_reasons, reason)
 
+/proc/log_test(text)
+	WRITE_LOG(GLOB.test_log, text)
+	SEND_TEXT(world.log, text)
+
 /proc/RunUnitTests()
 	CHECK_TICK
 
