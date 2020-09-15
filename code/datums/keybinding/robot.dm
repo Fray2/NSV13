@@ -8,6 +8,7 @@
 	name = "toggle_module_1"
 	full_name = "Toggle Module 1"
 	description = "Toggle your first module as a robot."
+	keybind_signal = COMSIG_KB_SILICON_TOGGLEMODULEONE_DOWN
 
 /datum/keybinding/robot/toggle_module_1/down(client/user)
 	if(!iscyborg(user.mob)) return
@@ -20,6 +21,7 @@
 	name = "toggle_module_2"
 	full_name = "Toggle Module 2"
 	description = "Toggle your second module as a robot."
+	keybind_signal = COMSIG_KB_SILICON_TOGGLEMODULETWO_DOWN
 
 /datum/keybinding/robot/toggle_module_2/down(client/user)
 	if(!iscyborg(user.mob)) return
@@ -33,6 +35,7 @@
 	name = "toggle_module_3"
 	full_name = "Toggle Module 3"
 	description = "Toggle your third module as a robot."
+	keybind_signal = COMSIG_KB_SILICON_TOGGLEMODULETHREE_DOWN
 
 /datum/keybinding/robot/toggle_module_3/down(client/user)
 	if(!iscyborg(user.mob)) return
@@ -45,6 +48,7 @@
 	name = "change_intent_robot"
 	full_name = "Change Intent"
 	description = "Change your intent as a robot."
+	keybind_signal = COMSIG_KB_SILICON_CYCLEINTENT_DOWN
 
 /datum/keybinding/robot/change_intent_robot/down(client/user)
 	if(!iscyborg(user.mob)) return
@@ -58,6 +62,7 @@
 	name = "unequip_module"
 	full_name = "Unequip Module"
 	description = "Unequip a robot module."
+	keybind_signal = COMSIG_KB_SILICON_UNEQUIPMODULE_DOWN
 
 /datum/keybinding/robot/unequip_module/down(client/user)
 	if(!iscyborg(user.mob)) return
