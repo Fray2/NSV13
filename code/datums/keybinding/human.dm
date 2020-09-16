@@ -61,6 +61,7 @@
 	name = "quick_equip_backpack"
 	full_name = "Put Item In Backpack"
 	description = ""
+	keybind_signal = COMSIG_KB_HUMAN_BAGEQUIP_DOWN
 
 /datum/keybinding/human/quick_equip_backpack/down(client/user)
 	if (!ishuman(user.mob)) return
